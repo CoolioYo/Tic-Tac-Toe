@@ -5,14 +5,15 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 
 public class GUI extends JFrame {
-    private Container pane;
+    private JFrame frame;
     private JButton[][] board;
-    private JMenu menu;
+
     private JMenuBar menuBar;
-    private JMenuItem quit;
-    private JMenuItem newGame;
+    private JComboBox difficulty;
+    private JButton newGame;
 
     private String currentPlayer;
+    private String difficultyText = "easy";
     private boolean hasWinner;
 
     private String[][] boardAI = {
@@ -21,19 +22,22 @@ public class GUI extends JFrame {
             {"", "", ""}
     };
 
+    private Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+
 
     ArrayList<Integer> available;
 
     public GUI() {
         super();
 
-        pane = getContentPane();
-        pane.setLayout(new GridLayout(3, 3));
-        setTitle("Tic Tac Toe");
-        setSize(500, 500);
-        setResizable(false);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setVisible(true);
+        frame = new JFrame("Tic Tac Toe");
+        frame.setLayout(new GridLayout(3, 3));
+        frame.setTitle("Tic Tac Toe");
+        frame.setSize(500, 500);
+        frame.setResizable(false);
+        frame.setLocation(dim.width/2-frame.getSize().width/2, dim.height/2-frame.getSize().height/2);
+        frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        frame.setVisible(true);
 
         board = new JButton[3][3];
         hasWinner = false;
@@ -46,29 +50,28 @@ public class GUI extends JFrame {
 
     private void initializeMenuBar() {
         menuBar = new JMenuBar();
-        menu = new JMenu("Options");
 
-        newGame = new JMenuItem("New Game");
+        difficulty = new JComboBox();
+        difficulty.addItem("Easy Mode");
+        difficulty.addItem("Impossible Mode");
+        difficulty.setMaximumSize(difficulty.getPreferredSize());
+
+        newGame = new JButton("New Game");
         newGame.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println("<<NEW GAME>>");
+                difficultyText = ((String) difficulty.getSelectedItem()).toLowerCase();
+                int index = difficultyText.indexOf(" ");
+                difficultyText = difficultyText.substring(0, index);
+                System.out.println("difficulty: "+difficultyText);
+
                 resetBoard();
             }
         });
 
-        quit = new JMenuItem("Quit");
-        quit.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                System.exit(0);
-            }
-        });
-
-        menu.add(newGame);
-        menu.add(quit);
-        menuBar.add(menu);
-        setJMenuBar(menuBar);
+        menuBar.add(difficulty);
+        menuBar.add(newGame);
+        frame.setJMenuBar(menuBar);
     }
 
     private void resetBoard() {
@@ -90,7 +93,7 @@ public class GUI extends JFrame {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 JButton button = new JButton();
-                button.setFont(new Font(Font.DIALOG, Font.PLAIN, 100));
+                button.setFont(new Font(Font.DIALOG, Font.BOLD, 100));
 
                 board[i][j] = button;
 
@@ -113,7 +116,7 @@ public class GUI extends JFrame {
                         }
                     }
                 });
-                pane.add(button);
+                frame.add(button);
             }
         }
     }
@@ -138,15 +141,21 @@ public class GUI extends JFrame {
             hasWinner = true;
             if(!result.equals("tie")){
                 System.out.println("<<"+result+" wins>>");
-                JOptionPane.showMessageDialog(null, result+" wins!");
+                JOptionPane.showMessageDialog(frame, result+" wins!");
             }else{
                 System.out.println("<<Tie>>");
-                JOptionPane.showMessageDialog(null, "It was a tie!");
+                JOptionPane.showMessageDialog(frame, "It was a tie!");
             }
         }else{
             if (currentPlayer.equals("X")) {
                 currentPlayer = "O";
-                enemyTurn();
+                if(difficultyText.equals("easy")){
+                    System.out.println("RANDOM MOVE");
+                    randomMove();
+                }else{
+                    System.out.println("SMART MOVE");
+                    smartMove();
+                }
             } else {
                 currentPlayer = "X";
             }
@@ -189,7 +198,21 @@ public class GUI extends JFrame {
         boardAI[row][col] = player;
     }
 
-    private void enemyTurn() {
+    private void randomMove(){
+        int randIndex = (int)(Math.random() * available.size());
+        int randMove = available.get(randIndex);
+
+        testMove("O", randMove);
+
+        int row = (randMove-1)/3;
+        int col = Math.max(0,(randMove-1))%3;
+
+        board[row][col].setText("O");
+        togglePlayer();
+
+    }
+
+    private void smartMove() {
         int index = 0;
         int bestMove = 0;
         int bestScore = Integer.MIN_VALUE;
